@@ -1,3 +1,7 @@
+Debug
+/Debug
+.idea
+/.idea/*
 # Compiled Object files
 *.slo
 *.lo

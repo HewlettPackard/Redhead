@@ -1,0 +1,43 @@
+For wordsize 11 and 1024 number of words per block
+No. of data devices: 8.
+Size of each device: 1717986864 bytes.
+Size of data devices: 13743894912 bytes.
+No. of coding devices: 2.
+Size of coding devices: 3435973728 bytes.
+Total size of all devices: 17179868640 bytes.
+Total memory available: 17179869184 bytes.
+Total number of stripes: 19065
+Stripesize: 901120 bytes.
+Size of data stripe: 720896 bytes
+The time for initializing the RAID-6 parameters is 1.049850 seconds.
+The time for this step is 56.534302
+The time for each stripe in this step is 0.002966
+The time for this end-of-step is 0.001574
+The time for this step is 43.877428
+The time for each stripe in this step is 0.002302
+The time for this end-of-step is 0.000932
+The time for this step is 46.113962
+The time for each stripe in this step is 0.002419
+The time for this end-of-step is 0.000320
+The time for this step is 46.195778
+The time for each stripe in this step is 0.002423
+The time for this end-of-step is 0.000336
+The time for this step is 46.181395
+The time for each stripe in this step is 0.002423
+The time for this end-of-step is 0.000315
+The time for this step is 46.091913
+The time for each stripe in this step is 0.002418
+The time for this end-of-step is 0.000335
+The time for this step is 46.072819
+The time for each stripe in this step is 0.002417
+The time for this end-of-step is 0.000315
+The time for this step is 58.967753
+The time for each stripe in this step is 0.003093
+The time for this end-of-step is 0.000425
+The time for this step is 59.037039
+The time for each stripe in this step is 0.003097
+The time for this end-of-step is 0.000315
+The time for this step is 59.224556
+The time for each stripe in this step is 0.003107
+The time for this end-of-step is 0.000334
+The time for execution is 508.309093 seconds.

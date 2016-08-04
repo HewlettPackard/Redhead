@@ -1,0 +1,4 @@
+simpl-l4tm-vm45.u.hpl.hp.com slots=2
+simpl-l4tm-vm46.u.hpl.hp.com slots=2
+simpl-l4tm-vm47.u.hpl.hp.com slots=2
+simpl-l4tm-vm48.u.hpl.hp.com slots=2

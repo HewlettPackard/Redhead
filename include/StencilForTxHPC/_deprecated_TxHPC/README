@@ -1,0 +1,85 @@
+Author: Onkar Patil
+
+This README file is to explain the usage of the TransHPC framework.
+
+TransHPC is a framework that enables transactional HPC on persistent
+memory guaranteeing high availability, resiliance, fault-tolerance
+and reliability.
+It does so by implementing RAID-6 over persistent memory to handle 2
+memory failures and a Crash/Recovery mechanism that enables applications
+to resume from the last transaction during the crash.
+To implement RAID-6, TransHPC makes use of the Jerasure 2.0 library to
+perform all Galois field encoding and decoding math. The Jerasure 2.0 
+library makes use of gf-complete airthmetic library.
+
+List of files and folders in TransHPC:
+- jerasure/
+- gf-complete/
+- raid6/
+- apps/
+- r6_emu.c
+- Makefile
+- crash.sh
+
+The applications lie inside apps/ folder. However the main executing
+applications on TransHPC are in the r6_emu.c file.
+The Makefile compiles all the libraries with the application in the 
+r6_emu.c file and creates an executable r6_emu.
+
+The application is compiled as follows
+make r6_emu
+If you change the code or want to run clean do
+make clean
+
+NOTE: To run on different memory modes (LFS, /dev/shm, DRAM)
+Open the Makefile in vi editor or your favorite editor
+and uncomment the appropriate line for the target clean
+
+#       rm -r /lfs/*		- 	LFS
+#       rm -r /dev/shm/r6/*	-	/dev/shm
+#       rm -r lfs/*		-	DRAM
+
+Make sure you make the above folders if they don't exists
+Also uncomment the appropriate modes in the file r6_emu.c
+
+//#define MMAP_DIR "/lfs/"
+//#define MMAP_DIR "/dev/shm/r6"
+//#define MMAP_DIR "lfs"
+//#define METAfile "/lfs/meta";
+//#define METAfile "/dev/shm/r6/meta"
+//#define METAfile "lfs/meta"
+
+Uncomment one mode for the directory for the data shelves and the 
+corresponding other for the metafile
+
+ 
+The application is executed as follows
+USAGE: ./r6_emu <memory_allocate> <no. of data devices> <word size for the code> <no. of coding devices> <no. of words in block> <prefetch before> <prefetch after> <scratch_pad mem> <crash_recover?> 
+eg:.   ./r6_emu 33000 8 11 2 4 1 1 1024 0 
+
+
+The raid6 folder contains the following folders and files
+- include/r6_utils.h
+- src/r6.c
+These two files contain the core implementation of TransHPC.
+
+To make use of the framework to write an application, the programmer must 
+design two functions. 
+-Subgrid function
+-Control function
+The subgrid function must contain the stencil operation that needs to be 
+executed over the entire data region.
+The control function must contain all application control information like
+when to close or stop the application.
+These two functions need to be passed to the run() function which executes 
+them.
+The application must create it own memory and then pass it to the framework.
+Other functions that the applications need to call are intitialize_raid6_parameters(), 
+destroy_raid6_parameters().
+The command line arguments passed to the main function need to passed to the 
+intitialize_raid6_parameters() function in the first 2 parameters.
+The framework has little to no memory leaks.
+To see an example check the application implemented in r6_emu.c
+
+The script crash.sh demonstrates the ability of TransHPC to recover and application 
+from a crash. The results will be logged in the results folder.

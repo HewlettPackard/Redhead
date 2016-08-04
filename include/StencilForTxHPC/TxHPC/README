@@ -1,0 +1,232 @@
+Author: Onkar Patil
+
+This README file is to explain the usage of the TransHPC framework.
+
+TransHPC is a framework that enables transactional HPC on persistent
+memory guaranteeing high availability, resiliance, fault-tolerance
+and reliability.
+It does so by implementing RAID-6 over persistent memory to handle 2
+memory failures and a Crash/Recovery mechanism that enables applications
+to resume from the last transaction during the crash.
+To implement RAID-6, TransHPC makes use of the Jerasure 2.0 library to
+perform all Galois field encoding and decoding math. The Jerasure 2.0 
+library makes use of gf-complete airthmetic library.
+
+List of files and folders in TransHPC:
+- arch_probe/
+- jerasure/
+- gf-complete/
+- raid6/
+- apps/
+- r6_emu.c
+- Makefile
+- crash.sh
+
+The applications lie inside apps/ folder. However the main executing
+applications on TransHPC are in the r6_emu.c file.
+The Makefile compiles all the libraries with the application in the 
+r6_emu.c file and creates an executable r6_emu.
+
+The application is compiled as follows
+make r6_emu
+If you change the code or want to run clean do
+make clean
+
+NOTE: To run on different memory modes (LFS, /dev/shm, NFS, DRAM)
+Open the Makefile in vi editor or your favorite editor
+and uncomment the appropriate line for the target clean
+
+#       rm -r /lfs/*		-> 	LFS
+#       rm -r /dev/shm/r6/*	->	/dev/shm
+#       rm -r nfs/*		->	NFS
+
+Make sure you make the above folders if they don't exists for running in those memory modes.
+
+To compile the program, first execute ./arch_probe in the arch_probe/
+folder. Then do a make r6_emu to compile the sample program. This 
+program toggles the SIMD instruction code if the architecture supports 
+it. It also toggles the DEBUG mode, JERASURE mode, MEMORY mode, FAILURE mode and SIMD mode.
+
+The arch_probe program takes 5 command line arguments:
+1>Debug mode
+2>Jerasure mode
+3>Memory mode
+4>Failure mode
+5>SIMD mode
+
+To run in Debug mode, the first argument to arch_probe should be 1.
+If not the argument should be 0. 
+
+To run in Jerasure mode, the second argment should be 1.
+Turning this one will use liberation coding for parity calculations
+and turning it off(passing 0) will use Reed Solomon coding.
+
+You can choose from 4 memory modes
+1)LFS
+2)/dev/shm/
+3)DRAM
+4)NFS
+By default the program will run in DRAM mode
+
+To run in Failure mode pass the 4 argument as 1 else 0.
+This will simulate memory failures.
+
+To run in SIMD mode pass the 5 argument as 1 else 0.
+This willl toggle the SIMD flags.
+eg: ./arch_probe/arch_probe 0 0 2 1 1  ->   Debug mode off Jerasure mode off SHM mode on Failure mode on SIMD mode on
+
+Compile the program using the resultant Makefile.
+
+The inputs to the program will change depending on the mode you are
+running on. Read USAGE below.
+
+NOTE: It is the responsibility of the User to get the memory calculations
+right and the parameters passed correct accordingly. 
+It is recommended that you do the memory calculations before executing the
+parameters. The application is executed as follows(ALL INPUTS ARE IN BYTES)
+
+USAGE: ./r6_emu <memory_allocate> <no. of data devices> <word size for the code> <no. of coding devices> <no. of words in block> <prefetch before> <prefetch after> <scratch_pad mem> <crash_recover?> 
+eg:.   ./r6_emu 33000 8 32 2 4 1 1 1024 0 
+	-<memory_allocate> : This the memory to be allocated for all the data devices. This memory should be inclusive of the memory required for the free band gap(free band gap = <prefetch before> + <prefetch_after> + 1).
+			     It should also be inclusive of all the overhead incurred in the blocksize.
+ 
+	-<no. of data devices> : This is the number of data shelves or memory devices you are putting the data in.
+
+	-<word size for the code> : This is the word size you need to pass in order for the jerasure to calculate the parity code for your data.
+				    The wordsize depends on which mode you are running under. Without JERASURE mode it can be only 8, 16 or 32.
+				    In JERASURE mode it has to be the next prime number bigger than the number of data devices. In the code the wordsize will be long aligned.
+
+	-<no. of coding devices> : This is number of parity devices you need. This should be preferably 2.
+
+	-<no. of words in block> : This indicates how big the size of your block should be and indirectly how many stripes the entire dataregion should be divided into.  
+				   Use the equations below to do your memory calculations for the input to the program. Do not forget the memory required for the free band gap as well. 
+
+	-<prefetch before> : This indicates how many stripes you want to prefetch that are before the current stripe given all the stripes are in ascending order always.
+
+	-<prefetch after> : This indicates how many stripes you want to prefetch that are after the current stripe given all the stripes are in ascending order always.
+
+	-<scratch_pad mem> : This is the memory you want to allocate for the scratchpad which will be allocated at the end of the metadata shelf.
+
+	-<crash_recover?> : This flag indicates whether you are recovering from a process crash or not. This should be 0 when you are not recovering from the crash and 1 when you are recovering from a crash.
+
+
+Memory caclulations:
+STEP 1: Decide on you dataset region size eg: 50MB
+STEP 2: Decide the number of data devices you will allocate this memory over eg: 8
+STEP 3: Decide the number of coding devices you will use eg: 2
+STEP 4: Decide the wordsize depending of the mode you are using eg: In JERASURE mode -> 11, In non-Jerasure mode -> 32
+STEP 5: Decide the prefetch_before and prefetch_after size. They need to equal eg: 1 and 1
+STEP 6: Decide the scratchpad size eg: 1024
+STEP 7: Decide the number of words in a block. This choice is crucial as it will decide the size of each block and hence the size of each stripe and also the number of stripes.
+	Choose wisely depending on your application and keep it optimal according your needs eg: 32 
+
+Calculate the <blocksize> = (<no. of words in block>*<word size for the code>*sizeof(long)) in JERASURE mode and in non-JERASURE mode it will be (<no. of words in block>*<word size for the code>).
+eg: JERASURE mode 32*11*8 = 2816 bytes per block; Non-JERASURE mode 32*32 = 1024 bytes per block
+
+Calculate the <size of each device> =  (<dataset region size>/<no of data devices>) eg: 50MB/8 = 6,553,600 bytes per device
+
+Calculate the <no of stripes> = (<size of each device>/<blocksize> + 1) eg: In JERASURE mode (6553600/2816) + 1 = 2328; In non-Jerasure mode (6553600/1024) + 1 = 6401 
+
+Calculate the total memory you need to allocate for all data devices and parity devices
+<memory_allocate> = (<dataset region size>*(<data> + <coding>)/<data>)*((<no of stripes> + <prefetch_before> + <prefetch_after> + 1)/<no of stripes>)
+		  = (50MB*(8+2)/8)*((2328+1+1+1)/2328) = 65,620,454 bytes in JERASURE mode
+		  = (50MB*(8+2)/8)*((6401+1+1+1)/6401) = 65,566,716 bytes in non-JERASURE mode
+
+Insert these values as inputs to the initialize_raid6_parameters() function via command-line arguments through main().
+eg: ./r6_emu 65620454 8 11 2 32 1 1 1024 0   ->   in JERASURE mode
+    ./r6_emu 65566716 8 32 2 32 1 1 1024 0   ->   in non-JERASURE mode
+
+
+The raid6 folder contains the following folders and files
+- include/r6_utils.h
+- src/r6.c
+These two files contain the core implementation of TransHPC.
+
+To make use of the framework to write an application, the programmer must 
+design two functions. 
+-Subgrid function
+-Control function
+The subgrid function must contain the stencil operation that needs to be 
+executed over the entire data region.
+The control function must contain all application control information like
+when to close or stop the application.
+These two functions need to be passed to the run() function which executes 
+them.
+You can pass any argument you need to pass to these functions in the 2nd 
+and 4th parameter respectively.
+For example run(&subgrid, args1, &control, args2)
+
+The signatures of the two functions are as follows
+subgrid(void * args, char * cur_stripe, meta * meta_info, int stripe_id, char* cur_load_stripe, char** before, char** after)
+	cur_stripe : is the pointer to the contiguous memory in one stripe. 
+		     The size of this memory is equal to the number of data 
+		     devices multiplied by the size of each block. This 
+		     information will be available in the meta_info struct.
+	meta_info : is the data structure that holds all the vital information
+		    regarding the framework. The members of this struct are as
+		    follows 
+		   long long unsigned counter;                                                                                             //Count of the number of steps taken by the Free Band Gap         
+		   int free_band_gap_id;                                                                                                   //Current position of the top of free band gap                    
+		   int no_of_data_devices;                                                                                                 //Total number of data shelves                                    
+		   long long unsigned wordsize;                                                                                            //Prime number for the Jerasure2.0 encoding unit word size        
+		   long long unsigned wordsize_long_aligned;                                                                               //Word size multiplied by the size of long                        
+		   int no_of_words_in_block;                                                                                               //Block size divided by the word size long alligned               
+		   int no_of_parity_devices;                                                                                               //Total number of parity devices                                  
+		   int no_of_stripes;                                                                                                      //Total number of stripes of the entire data region               
+		   int total_devices;                                                                                                      //Total number of shelves for data and parity                     
+		   long long unsigned devicewords;                                                                                         //Total number of words in the entire data region                 
+		   long long unsigned stripesize;                                                                                          //Size of each and entire stripe                                  
+		   char **data_shelf;                                                                                                      //Anchor to all the data shelves in persitent memory              
+		   long long unsigned datastripesize;                                                                                      //Size of the each and only the data part of the stripe           
+		   long long unsigned devicesize;                                                                                          //Size of the data shelves                                        
+		   long long unsigned blocksize;                                                                                           //Size of each data block                                         
+		   long long unsigned memory_allocate;                                                                                     //Total Memory allocated by the application for all data shelves  
+		   long long unsigned data_region_size;                                                                                    //Cumalative size of all data blocks                              
+		   int prefetch_before;                                                                                                    //Number of stripes to be prefetched preceeding the current stripe
+		   int prefetch_after;                                                                                                     //Number of stripes to be prefetched proceeding the current stripe
+		   long long unsigned scratchpad_offset;                                                                                   //The starting address of the scratchpad                          
+		   long long unsigned pad;                                                                                                 //The size of the scratchpad                                      
+		   bool end;                                                                                                               //The flag to stop the Free Band Gap mover                        
+		   int erasures[3];                                                                                                        //Array to keep track of data shelf failures                      
+		   char gap_filler[40];                                                                                                    //Padding to make the Meta pointer cache line aligned             
+	stripe_id : is the number of the current stripe that you are working on. 
+	            It ranges from 0 to (meta_info->no_of_stripes - meta_info->prefetch_before - meta_info->prefetch_after - 1) in an even step
+		    and (meta_info->no_of_stripes - 1) to (meta_info->prefetch_before + meta_info->prefetch_after + 1) in an odd step
+	cur_load_stripe : is the read-only copy of the current stripe.
+	before : is the array of prefetched before stripes. The stripe ids
+		 will always be less than the current stripe in every step.
+		 The first stripe in the array will be the stripe just 
+		 above the current stripe. If prefetch_before is 0, then this 
+                 will be a NULL array.
+	after : is the array of prefeteched after stripes. The stripe ids
+                will always be greater than the current stripe in every step.
+                The first stripe in the array will be the stripe just below
+                the current stripe. If prefetch_after is 0, then this will be
+	        a NULL array.   
+
+void control(void * args, meta * meta_info)
+
+
+The application must create it own memory and then pass it to the framework.
+Other functions that the applications need to call are intitialize_raid6_parameters(), 
+destroy_raid6_parameters().
+
+The command line arguments passed to the main function need to passed to the 
+intitialize_raid6_parameters() function in the first 2 parameters.
+The first parameter argc is the number of parameters that you are passing in
+the array passed as the second parameter. Start putting the arguments from 
+index 1 in th array.
+The second parameter argv is the array of arguments that you pass to the 
+main function in the exact order recieved.
+The third parameter is the array of pointers to the mmaped datashelves 
+including the pointer to the metashelf which should be the last element of 
+the array.
+The fourth parameter is the total number of memory devices inclusive of data
+devices, parity devices and the meta device.
+For example intitialize_raid6_parameters(argc, argv, data_shelves, no_of_devices)
+
+The framework has little to no memory leaks.
+To see an example check the application implemented in r6_emu.c
+
+The script crash.sh demonstrates the ability of TransHPC to recover and application 
+from a crash. The results will be logged in the results folder.

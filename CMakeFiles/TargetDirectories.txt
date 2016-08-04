@@ -1,0 +1,3 @@
+/home/kuscum/workspace/TAS/CMakeFiles/edit_cache.dir
+/home/kuscum/workspace/TAS/CMakeFiles/rebuild_cache.dir
+/home/kuscum/workspace/TAS/CMakeFiles/FASD.dir
