@@ -4,7 +4,7 @@
 
 #include <chrono>
 #include "sparseMatrixMultiplication.h"
-#include "include/StencilForTxHPC/TxHPC.h"
+//#include "include/StencilForTxHPC/TxHPC.h"
 
 #define arraySize 100
 #define maxRandomValue 1000
@@ -12,6 +12,13 @@
 int additionalArray[arraySize][arraySize]; //Dense array
 int sparseMatrix[arraySize][arraySize];
 
+//With TxHPC
+int kernel_SpM_TxHPC(int x, int y, Grid<int > grid){
+    int value = grid.cell(x, y) + sparseMatrix[x][y] * additionalArray[x][y];
+    return value;
+}
+
+//Without TxHPC
 void kernel_SpM(int x, int y, GridPointer gP, Grid<int > grid){
     int value = grid.getCell(x, y) + sparseMatrix[x][y] * additionalArray[x][y];
     grid.Emit(value, gP);

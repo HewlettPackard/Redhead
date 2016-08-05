@@ -4,7 +4,7 @@
 
 #include <chrono>
 #include "jacobian.h"
-#include "include/StencilForTxHPC/TxHPC.h"
+//#include "include/StencilForTxHPC/TxHPC.h"
 
 double kernel_TxHPC_jacobian2d(int x, int y, Grid<double> grid){
     double newValue =  0.25 * (grid.cell(x+1, y) + grid.cell(x-1, y) + grid.cell(x, y+1) + grid.cell(x, y-1));

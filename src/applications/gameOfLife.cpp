@@ -4,8 +4,43 @@
 
 #include <chrono>
 #include "gameOfLife.h"
-#include "include/StencilForTxHPC/TxHPC.h"
+//#include "include/StencilForTxHPC/TxHPC.h"
 
+//With TxHPC
+double kernel_gameOfLife_TxHPC(int x, int y, Grid<int> grid){
+    int sum =
+            //Horizontal Neighbours
+            grid.cell(x+1, y) + grid.cell(x-1, y)
+            + grid.cell(x, y+1) + grid.cell(x, y-1)
+            //Diagonal Neighbours
+            + grid.cell(x+1, y+1) + grid.cell(x+1, y-1)
+            + grid.cell(x-1, y-1) + grid.cell(x-1, y+1);
+
+    if(grid.cell(x, y) == 1){
+        //Cell alive - does it survive?
+        if((1 < sum) && (sum < 4)){
+            //if 2 or 3 neighbors, the cell survives
+           return 1;
+        }
+        else{
+            //cell dies! Cell is either overpopulated or isolated
+           return 0;
+        }
+    }
+    else{
+        //Cell is dead - will it be born?
+        if(sum == 3){
+            //Cell lives
+            return 1;
+        }
+        else{
+            //Cell stays dead
+            return 0;
+        }
+    }
+}
+
+//Without TxHPC
 void kernel_gameOfLife(int x, int y, GridPointer gP, Grid<int> grid){
     int sum =
             //Horizontal Neighbours

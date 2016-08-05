@@ -1,0 +1,17 @@
+For wordsize 32 and 8 number of words per block
+No. of data devices: 8.
+Size of each device: 104832 bytes.
+Size of data devices: 838656 bytes.
+No. of coding devices: 2.
+Size of coding devices: 209664 bytes.
+Total size of all devices: 1048320 bytes.
+Total memory available: 1048576 bytes.
+Total number of stripes: 409
+Stripesize: 2560 bytes.
+Size of data stripe: 2048 bytes
+initializing_time 0.054410
+avg_step_time_bf inf
+avg_step_time_af 0.000000
+avg_stripe_time_bf inf
+avg_stripe_time_af 0.000000
+execution_time 0.039844

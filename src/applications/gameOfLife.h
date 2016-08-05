@@ -9,8 +9,11 @@
 
 using namespace StencilForTxHPC;
 
-void kernel_gameOfLife(int x, int y, GridPointer gP, Grid<int> grid);
 
+
+double kernel_gameOfLife_TxHPC(int x, int y, Grid<int> grid);
+
+void kernel_gameOfLife(int x, int y, GridPointer gP, Grid<int> grid);
 double gameOfLife(void* memoryPointer, int x_axes, int y_axes, bool printGrid, int iterations);
 
 #endif //FASD_GAMEOFLIFE_H

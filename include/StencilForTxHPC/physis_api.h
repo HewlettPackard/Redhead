@@ -7,24 +7,25 @@
 #include <iostream>
 #include <sstream>
 #include "TxHPC.h"
+#include <cstddef>
 
-//void run_test(void (Stencil::*proc1)()){
-//    (Stencil.proc1)();
-//}
 
 namespace StencilForTxHPC {
 
     static void iterate_compute(void* args, char * cur_stripe, Meta * meta_info, int stripe_id, char* load, char** before, char** after);
     static void control_function(void * args, meta * meta_info);
 
+    static bool print_flag = true;
+    static int shitcounter = 0; //Used to print the data in a correct layout
+
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
-    static void **memory;
-    static int amountOfPointer;
+//    static void **memory;
+//    static int amountOfPointer;
 
 #pragma mark 2D
 //Gives you the pointer to 1 single dimension
-    static int trans_2D_to_lin(int y, int x, int rowSize1){
+    static  int trans_2D_to_lin(int y, int x, int rowSize1){
         int lin = y * rowSize1 + x;
         return lin;
     };
@@ -33,14 +34,14 @@ namespace StencilForTxHPC {
     };
 //Gives you the pointer to the global view again
 //Only works for 2D
-    static std::pair<int, int> lin_to_offset_stripeID(int lin, int rowSize2){
+    static  std::pair<int, int> lin_to_offset_stripeID(int lin, int rowSize2){
         int offset = lin % rowSize2;
         int stripeID = (lin/rowSize2); //Automatic Floor of value (rounding up)
         return std::make_pair(offset, stripeID);
     };
-    static std::pair<int, int> trans_lin_to_2D(int lin, int rowSize){
-        int x = lin % rowSize;
-        int y = (lin/rowSize);
+    static  std::pair<int, int> trans_lin_to_2D(int lin, int rowSize){
+        int y = lin % rowSize;
+        int x = (lin/rowSize);
         return std::make_pair(x, y);
     };
 #pragma mark NDIM
@@ -178,6 +179,14 @@ namespace StencilForTxHPC {
         }
 
         void config_GridForTxHPC(int set_stripeID, GridType *set_currentStripe, GridType **set_prefetch_previousStripe, GridType **set_prefetch_successorStripe, int set_no_cells_in_stripe){
+
+//            std::cout << set_prefetch_successorStripe[0][0] << std::endl;
+//            std::cout << "previous_stripe" << std::endl;
+//            for (int i = 0; i < 704; ++i) {
+//                std::cout << set_prefetch_previousStripe[0][i];
+//            }
+//            std::cout << std::endl;
+
             stripeID = set_stripeID;
             currentStripe = set_currentStripe;
             prefetch_previousStripe = set_prefetch_previousStripe;
@@ -227,7 +236,7 @@ namespace StencilForTxHPC {
         GridType cell(int x, int y){
             //Need to translate this to the lin values and get the pointer
 
-            int lin = trans_2D_to_lin(y, x, this->gety());
+            int lin = trans_2D_to_lin(x, y, this->gety());
 
             //Getting the stripeID of the points
             std::pair<int, int> cellInStripe = lin_to_offset_stripeID(lin, no_cells_in_stripe);
@@ -235,17 +244,25 @@ namespace StencilForTxHPC {
             //Check if cell is in current stripe
             if(stripeID == cellInStripe.second){
                 std::cout << "Cell is in current stripe" << std::endl;
+
+
                 return currentStripe[cellInStripe.first];
             }else if((stripeID) < cellInStripe.second){
-                std::cout << "Cell can be found in previous stripe" << std::endl;
+                std::cout << "I am in " << stripeID << ", Cell can be found in successor stripe" << std::endl;
                 int findStripeID = (cellInStripe.second - stripeID) - 1;
-
-                return prefetch_previousStripe[findStripeID][cellInStripe.first];
-            }else if((stripeID) > cellInStripe.second){
-                std::cout << "Cell can be found in successor stripe" << std::endl;
-                int findStripeID = (stripeID - cellInStripe.second) - 1;
+                if((findStripeID > 0) || (findStripeID < 0)){
+                    handle_error("ACCESSING MORE THAN 1 PREFETCH STRIPE.");
+                }
 
                 return prefetch_successorStripe[findStripeID][cellInStripe.first];
+            }else if((stripeID) > cellInStripe.second){
+                std::cout << "Cell can be found in previous stripe" << std::endl;
+                int findStripeID = (stripeID - cellInStripe.second) - 1;
+                if((findStripeID > 0) || (findStripeID < 0)){
+                    handle_error("ACCESSING MORE THAN 1 PREFETCH STRIPE.");
+                }
+
+                return prefetch_previousStripe[findStripeID][cellInStripe.first];
             }else{
                 //(current) stripeID - searchingForCellInStripe
                 int searchingForStripe = stripeID - cellInStripe.second;
@@ -289,11 +306,13 @@ namespace StencilForTxHPC {
             dimensions = 3;
         }
 
-        Domain(int setmin_x, int setmax_x, int setmin_y, int setmax_y) {
-            min_x = setmin_x;
-            min_y = setmin_y;
-            max_x = setmax_x;
-            max_y = setmax_y;
+        Domain(int P1_x, int P1_y, int P2_x, int P2_y) {
+
+            min_x = P1_x;
+            min_y = P1_y;
+
+            max_x = P2_x;
+            max_y = P2_y;
             dimensions = 2;
         }
 
@@ -369,6 +388,7 @@ namespace StencilForTxHPC {
     private:
         Domain *d;
         Grid<TypeOfGrid> *g;
+        int iterationsOfStencil = 0;
 //        void (*iterate_compute)(void * args, char * cur_stripe, Meta * meta_info, int stripe_id, char* load, char** before, char** after);
 //        void (*control_function)(void * args, meta * meta_info);
     public:
@@ -408,6 +428,14 @@ namespace StencilForTxHPC {
         }
         Grid<TypeOfGrid>* getGrid(){
             return g;
+        }
+
+        void setIteations(int i){
+            this->iterationsOfStencil = i;
+        }
+
+        int getIterations(){
+            return iterationsOfStencil;
         }
 
         void setInitFunction(double (*initfunction)(void)){
@@ -546,26 +574,25 @@ namespace StencilForTxHPC {
 
 
         //Runs the Stencil with StencilForTxHPC
-        void run_withTxHPC() {
-            int* iterations = new int;
-            *iterations = 1;
-            char* dumpptr = static_cast<char*>(static_cast<void*>(this));
+        void run_withTxHPC(int iterations) {
+            this->setIteations(iterations);
+            char* stencilObj = static_cast<char*>(static_cast<void*>(this));
 //            long sizeOfGrid = sizeof(this);
 //            dumpptr[sizeOfGrid] = static_cast<char*>(static_cast<void*>(this->g));
 
 
-            run(&(iterate_compute), dumpptr, &(StencilForTxHPC::control_function), dumpptr);
+            run(&(iterate_compute), stencilObj, &(StencilForTxHPC::control_function), stencilObj);
             //run_test(&Stencil<double>::*(kamesh));
         }
 
-        void init(char** memoryPointer, int amountOfPointer, long sizeOfEachShelf){
+        void init(char** memoryPointer, int amountOfPointer, long sizeOfEachShelf, int prefetchSize, long sizeOfScratchPad){
             //In StencilForTxHPC the two dimensional grid is split into blocks and cells
             //a block contains multiple cell -> array[block][cell]
 
 #pragma mark GATHER INPUT PARAMETERS
 
 #ifdef JERASURE
-            std::cout << "FLAG WORKS. " << std::endl;
+            std::cout << "JERASURE FLAG WORKS. " << std::endl;
             //Prime number which is bigger than 8 shelfs
             int primeNumber = 11;
             int wordSize = 11;
@@ -580,23 +607,32 @@ namespace StencilForTxHPC {
 
 #endif
             //Get number of devices
-            int amountOfDevices = amountOfPointer-1; // 11 shelfs in total , 10 without metadata shelf
-            int total_devices_WITHOUT_METASHELF = amountOfDevices;
-            int no_of_data_devices = amountOfDevices-2; //2 parities
-            int no_of_coding_devices = amountOfDevices-no_of_data_devices; //Remaining 2 Shelfs are for parity
+            double amountOfDevices = amountOfPointer-1; // 11 shelfs in total , 10 without metadata shelf
+            double total_devices_WITHOUT_METASHELF = amountOfDevices;
+            double no_of_data_devices = amountOfDevices-2; //2 parities
+            double no_of_coding_devices = amountOfDevices-no_of_data_devices; //Remaining 2 Shelfs are for parity
 
-            long gridSize = ((g->getx() *  g->gety() * sizeof(TypeOfGrid)) * 1.048576);  //50MB
+            double gridSize = ceil(((g->getx() *  g->gety() * sizeof(TypeOfGrid)) * 1.048576));  //50MB
 
-            long size_of_each_device = (gridSize/no_of_data_devices);
-            long no_of_stripes = size_of_each_device/blocksize + 1;
+            double size_of_each_device = ceil((gridSize/no_of_data_devices));
+            double no_of_stripes = ceil(size_of_each_device/blocksize);
 
-            int prefetch_after = 4;
-            int prefetch_before = 4;
-            long memory_allocate = (gridSize * (amountOfDevices) / no_of_data_devices) * ((no_of_stripes + prefetch_after + prefetch_before + 1)/ no_of_stripes);
+            int prefetch_after = prefetchSize;
+            int prefetch_before = prefetchSize;
+
+            int memory_all_a = (gridSize * (amountOfDevices/no_of_data_devices))+1;
+            double memory_all_b =  (no_of_stripes + prefetch_after + prefetch_before + 1);
+            int memory_allocate = ceil((memory_all_a * memory_all_b)/no_of_stripes);
+
+            memory_allocate += 3000;
+
+            //long memory_allocate = ((((gridSize * ((amountOfDevices)/no_of_data_devices))+1) * (no_of_stripes + prefetch_after + prefetch_before + 1))/ no_of_stripes);
+
+
 
             long new_size_of_each_device = memory_allocate/total_devices_WITHOUT_METASHELF;
 
-            int scratchPad = 1024; //Minimum size of metadata running without scratchpad
+            int scratchPad = sizeOfScratchPad; //Minimum size of metadata running without scratchpad
             int crash_recovery = 0; //no crash occurred -> 0
 /*
             //(I) Find right number of block size
@@ -690,9 +726,9 @@ namespace StencilForTxHPC {
 
 #pragma mark Translate int/longs to char*
             std::string totalMemory = std::to_string(memory_allocate);
-            std::string no_of_data_devices_string = std::to_string(no_of_data_devices); //8 Shelfs are for coding
+            std::string no_of_data_devices_string = std::to_string((int)no_of_data_devices); //8 Shelfs are for coding
             std::string wordSize_string = std::to_string(primeNumber);
-            std::string no_of_coding_devices_string = std::to_string(no_of_coding_devices);
+            std::string no_of_coding_devices_string = std::to_string((int)no_of_coding_devices);
             std::string no_of_words_in_a_block_string = std::to_string(no_of_words_in_a_block);
             std::string prefetchBefore_string = std::to_string(prefetch_before);
             std::string prefetchAfter_string = std::to_string(prefetch_after);
@@ -725,8 +761,8 @@ namespace StencilForTxHPC {
             case 2: {
                 //2D Grid
                 //Converting the points in the dimension
-                int minP1 = trans_2D_to_lin(domain_to_translate->miny(), domain_to_translate->minx(), g->gety());
-                int maxP1 = trans_2D_to_lin(domain_to_translate->maxy(), domain_to_translate->maxx(), g->gety());
+                int minP1 = trans_2D_to_lin(domain_to_translate->minx(), domain_to_translate->miny(), g->gety());
+                int maxP1 = trans_2D_to_lin(domain_to_translate->maxx(), domain_to_translate->maxy(), g->gety());
 
                 //Getting the stripeID of the points
                 std::pair<int, int> minP = lin_to_offset_stripeID(minP1, cellsInStripe);
@@ -769,37 +805,88 @@ namespace StencilForTxHPC {
                 handle_error("3 dimensions not supported yet.");
                 break;
         }
-
-
     }
+
+
 
     static void iterate_compute(void* args, char * cur_stripe, Meta * meta_info, int stripe_id, char* load, char** before, char** after) {
         int numberOfBlocks = meta_info->no_of_data_devices;
         int numberOfCellsInABlock = (meta_info->blocksize / sizeof(long));
         int no_of_cells_in_a_stripe = numberOfCellsInABlock * numberOfBlocks;
         //Debug:
-            long sizeOfStripe = meta_info->datastripesize;
-            long sizeOfStripe2 = numberOfBlocks * meta_info->blocksize;
-            long no_stripes = meta_info->no_of_stripes - (meta_info->prefetch_after + meta_info->prefetch_before + 1);//Metadata, Partities
-            long no_of_total_cells = no_of_cells_in_a_stripe * no_stripes;
-            std::cout << "I have access to " << no_stripes << " stripes. " << "This is stripe# :" << stripe_id << std::endl;
-
+        long sizeOfStripe = meta_info->datastripesize;
+        long sizeOfStripe2 = numberOfBlocks * meta_info->blocksize;
+        long no_stripes = meta_info->no_of_stripes - (meta_info->prefetch_after + meta_info->prefetch_before + 1);//Metadata, Partities
+        long no_of_total_cells = no_of_cells_in_a_stripe * no_stripes;
+        std::cout << "I have access to " << no_stripes << " stripes. " << "This is stripe# :" << stripe_id << std::endl;
+//
 //            std::cout << "Each stripe has " << no_of_cells_in_a_stripe << " Cells to access. Testing access. " << std::endl;
 //            std::cout << "There are " << no_of_total_cells << " amount of cells and this is " <<  no_of_total_cells*sizeof(long) << " Byte." << std::endl;
 
-        double *cellpointer = (double *) load;
+        double *cellpointer = (double *) cur_stripe;
         double **prefetch_before = (double **) before;
         double **prefetch_after = (double **) after;
+
+//        scratchpad = (long long unsigned *)get_scratchpad();
+
+        if(1 != meta_info->prefetch_after){
+            handle_error("prefetch is not working correctly");
+        }
 
         //Set up prefetch pointers so one can use them properly
         prefetch_after = (double **) malloc(sizeof(double *) * meta_info->prefetch_after);
         prefetch_before = (double **) malloc(sizeof(double *) * meta_info->prefetch_before);
-        for (int j = 0; j < meta_info->prefetch_after; ++j) {
-            prefetch_after[j] = (double *) after[j];
+
+//        prefetch_after = new double*[meta_info->prefetch_after]; //(sizeof(double *) * meta_info->prefetch_after);
+//
+
+        for(int i = 0; i < meta_info->prefetch_before; i++)
+        {
+            if((*before) != NULL)
+            {
+                prefetch_before[i] = (double*)(before[i]);
+
+                for (int j = 0; j <704; ++j) {
+                    std::cout << prefetch_before[0][j];
+                }std::cout << std::endl;
+
+            }
+            else{
+                std::cout << "Prefetch before is null." << std::endl;
+            }
         }
-        for (int k = 0; k < meta_info->prefetch_before; ++k) {
-            prefetch_before[k] = (double *) after[k];
+
+        for(int i = 0; i < meta_info->prefetch_after; i++)
+        {
+            if((*after) != NULL)
+            {
+                prefetch_after[i] = (double*)(after[i]);
+                for (int j = 0; j <704; ++j) {
+                    std::cout << prefetch_after[0][j];
+                }std::cout << std::endl;
+            }
+            else{
+                std::cout << "Prefetch after is null." << std::endl;
+            }
         }
+
+
+
+//        for (int j = 0; j < meta_info->prefetch_after; ++j) {
+//            prefetch_after[j] = (double *) after[j];
+//            std::cout << prefetch_after[j][4] << std::endl;
+//            if(*after == NULL){
+//                std::cout << "After is null." << std::endl;
+//            }
+//        }
+//        for (int k = 0; k < meta_info->prefetch_before; ++k) {
+//            prefetch_before[k] = (double *) after[k];
+//            std::cout << prefetch_before[k][4] << std::endl;
+//            if(*before == NULL){
+//                std::cout << "prefetch is null" << std::endl;
+//            }
+//        }
+
 
         //Get the Metainformation of the application
         Stencil<double> *currentStencil = static_cast<Stencil<double> *>(args);
@@ -809,35 +896,33 @@ namespace StencilForTxHPC {
         Domain valuesToProcess = translate_Domain_To_Linear_Cell<double>(currentDomain, currentGrid, stripe_id,
                                                                          no_of_cells_in_a_stripe);
 
-        if(stripe_id == 9295)
-        {
-            std::cout << std::endl;
-        }
-        if (currentGrid->initalized) {
+        std::cout << std::endl;
+        currentGrid->config_GridForTxHPC(stripe_id, (double *) cellpointer, prefetch_before, prefetch_after,
+                                         no_of_cells_in_a_stripe);
+
+        if ((currentGrid->initalized) && (meta_info->counter % 2 == 0)) {
+            //PROCESS DOMAIN
             if (valuesToProcess.getNumberDim() != 0) {
                 //If the domain exists, this stripe does contain values to work in
-                currentGrid->config_GridForTxHPC(stripe_id, (double *) cellpointer, prefetch_before, prefetch_after,
-                                                 no_of_cells_in_a_stripe);
-
                 for (int i = valuesToProcess.minx(); i < valuesToProcess.maxx(); ++i) {
                     //Translating back from Cell:Stripe 2D Array
                     int cell = trans_2D_to_lin(stripe_id, i, no_of_cells_in_a_stripe);
                     std::pair<int, int> point2d = trans_lin_to_2D(cell, currentGrid->gety());
-                    std::cout << "Working on point X:" << point2d.first << " Y:" << point2d.second << std::endl;\
-                currentStencil->kernel2d_TxHPC(point2d.first, point2d.second, *currentGrid);
+                    std::cout << "Working on point X:" << point2d.first << " Y:" << point2d.second << std::endl;
+                    cellpointer[i] = currentStencil->kernel2d_TxHPC(point2d.first, point2d.second, *currentGrid);
+
+
                 }
             }
         }
         else {
-            if(stripe_id == no_stripes){
+            //INIT DOMAIN
+            if(stripe_id == (no_stripes-1)){
                 //Last stripe
                 currentGrid->initalized = true;
             }
             if (valuesToProcess.getNumberDim() != 0) {
                 //Not the whole domain needs to be initialized
-                currentGrid->config_GridForTxHPC(stripe_id, (double *) cellpointer, prefetch_before, prefetch_after,
-                                                 no_of_cells_in_a_stripe);
-
                 if (valuesToProcess.maxx() == no_of_cells_in_a_stripe){
                     if(valuesToProcess.minx() == 0){
                         //all values in this stripe are in the domain - so I am not going to init these
@@ -872,15 +957,39 @@ namespace StencilForTxHPC {
                 }
             }
         }
+        if(print_flag){
+            int firstcell = trans_2D_to_lin(stripe_id, 0, no_of_cells_in_a_stripe);
+            std::pair<int, int> point2d = trans_lin_to_2D(firstcell, currentGrid->gety());
+            int lastcell = trans_2D_to_lin(stripe_id, no_of_cells_in_a_stripe, no_of_cells_in_a_stripe);
+            std::pair<int, int> point2d2 = trans_lin_to_2D(lastcell, currentGrid->gety());
+
+            int lastcellToProcess = trans_2D_to_lin(stripe_id, valuesToProcess.maxx(), no_of_cells_in_a_stripe);
+            std::pair<int, int> point2dLastCellToProcess = trans_lin_to_2D(lastcellToProcess, currentGrid->gety());
+            std::cout << "This stripe contains: P1[" << point2d.second << "][" << point2d.first << "]" << " - " << "P2[" << point2d2.second  << "][" << point2d2.first << "] Last Cell To Process: [" << point2dLastCellToProcess.second << "][" << point2dLastCellToProcess.first << "]" << std::endl;
+
+
+            for (int i = 0; i < no_of_cells_in_a_stripe; ++i) {
+                std::cout << cellpointer[i];
+                shitcounter++;
+                if(currentGrid->gety() == shitcounter){
+                    shitcounter = 0;
+                    std::cout << std::endl;
+                }
+//                    if((i+1) == valuesToProcess.maxx()){
+//                        std::cout <<std::endl<< "The following values aren't processed in this stripe:";
+//                    }
+            }
+            std::cout << std::endl;
+        }
     }
 
     static void control_function(void * args, meta * meta_info) {
-        if(meta_info->counter == 2)
+        Stencil<double> *currentStencil = static_cast<Stencil<double> *>(args);
+        if(meta_info->counter == (currentStencil->getIterations() -1)) //Counter starts at 0
         {
             meta_info->end = true;
         }
     };
-
 }
 
 #endif //FASD_PHYSIS_API_H

@@ -6,7 +6,7 @@
 #define TxHPC_H
 
 extern "C" {
-#include "include/StencilForTxHPC/TxHPC/raid6/include/r6_utils.h"
+#include "include/StencilForTxHPC/TxHPC4TM/raid6/include/r6_utils.h"
 }
 
 #include "include/portable_pointer/portable_pointer.h"

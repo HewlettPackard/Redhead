@@ -1,0 +1,12 @@
+For wordsize 11 and 32768 number of words per block
+No. of data devices: 8.
+Size of each device: 54975581320 bytes.
+Size of data devices: 439804650560 bytes.
+No. of coding devices: 2.
+Size of coding devices: 109951162640 bytes.
+Total size of all devices: 549755813200 bytes.
+Total memory available: 549755813888 bytes.
+Total number of stripes: 19065
+Stripesize: 28835840 bytes.
+Size of data stripe: 23068672 bytes
+The time for initializing the RAID-6 parameters is 1.285955 seconds.
