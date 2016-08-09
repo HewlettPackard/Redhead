@@ -9,8 +9,6 @@
 double kernel_TxHPC_jacobian2d(int x, int y, Grid<double> grid){
     double newValue =  0.25 * (grid.cell(x+1, y) + grid.cell(x-1, y) + grid.cell(x, y+1) + grid.cell(x, y-1));
 
-    std::cout << "VALUE IS " << newValue << std::endl;
-
     return newValue;
 }
 
@@ -66,7 +64,7 @@ double jacobian2d(void* memoryPointer, int x_axes, int y_axes, bool printGrid, i
 
     grid.initGrid(array, 0, x_axes, 0, y_axes);
     //Set the dimension properly, so the run function does not go out of the array boundary
-    Domain d(1, x_axes-1, 1, y_axes-1);
+    Domain d(1, 1, x_axes-1, y_axes-1);
     Stencil<double> stencil(kernel_jacobian2d, &grid, &d);
     //stencil.printGrid();
     //stencil.run(); same as iterate(1)
@@ -116,7 +114,8 @@ double jacobian3d(void* memoryPointer, int x_axes, int y_axes, int z_axes, bool 
 
     grid.initGrid(array, 0, x_axes, 0, y_axes, 0, z_axes);
     //Set the dimension properly, so the run function does not go out of the array boundary
-    Domain dim3d(1, x_axes-1, 1, y_axes-1, 1, z_axes-1);
+    //TODO fix dimension so this runs properly
+    Domain dim3d(1, 1, 1, x_axes-1, y_axes-1, z_axes-1);
     Stencil<double> stencil(kernel_jacobian3d, &grid, &dim3d);
     //stencil.printGrid(); For Debug
 
@@ -133,3 +132,17 @@ double jacobian3d(void* memoryPointer, int x_axes, int y_axes, int z_axes, bool 
     return measuredtime;
 };
 
+
+double jacobian2d_TxHPC(char** memoryPointer, int amountOfShelfs, int prefetch_size, int x_axes, int y_axes, int iterations){
+    Grid<double> grid(x_axes, y_axes); //Creates grid in memory
+    Domain d(1, 0, (x_axes-2), (y_axes-1));
+    Stencil<double> stencil(kernel_TxHPC_jacobian2d, &grid, &d);
+    stencil.setInitFunction(init_TxHPC_jacobian2d);
+    stencil.init(memoryPointer, amountOfShelfs, SHELVESIZE, prefetch_size, 1024);
+
+    std::chrono::steady_clock::time_point begin_run = std::chrono::steady_clock::now();
+    stencil.run_withTxHPC(iterations); //Number of iterations
+    std::chrono::steady_clock::time_point end_run = std::chrono::steady_clock::now();
+    double measuredtime =  static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds> (end_run - begin_run).count());
+    return measuredtime;
+};

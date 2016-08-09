@@ -6,7 +6,7 @@
 #include "sparseMatrixMultiplication.h"
 //#include "include/StencilForTxHPC/TxHPC.h"
 
-#define arraySize 100
+#define arraySize 2500
 #define maxRandomValue 1000
 
 int additionalArray[arraySize][arraySize]; //Dense array
@@ -18,10 +18,24 @@ int kernel_SpM_TxHPC(int x, int y, Grid<int > grid){
     return value;
 }
 
+int init_spM(){
+    return 0;
+}
+
 //Without TxHPC
-void kernel_SpM(int x, int y, GridPointer gP, Grid<int > grid){
+void kernel_SpM(int x, int y, GridPointer gP, Grid<int> grid){
     int value = grid.getCell(x, y) + sparseMatrix[x][y] * additionalArray[x][y];
     grid.Emit(value, gP);
+}
+
+//Init add. array for calculation
+void initAdditionalArrays(){
+    for (int i = 0; i < arraySize; ++i) {
+        for (int j = 0; j < arraySize; ++j) {
+            additionalArray[i][j] = rand() % maxRandomValue;
+            sparseMatrix[i][j] = 0;
+        }
+    }
 }
 
 double sparseMatrixMultiplication(void* memoryPointer, int x_axes, int y_axes, bool printGrid, int iterations){
@@ -75,4 +89,20 @@ double sparseMatrixMultiplication(void* memoryPointer, int x_axes, int y_axes, b
     }
 
     return measuredtime;
-}
+};
+
+double sparseMatrix_TxHPC(char** memoryPointer, int amountOfShelfs, int prefetch_size, int x_axes, int y_axes, int iterations){
+    Grid<int> spM(x_axes, y_axes); //Creates grid in memory
+    Domain spM_d(1, 1, x_axes-2, y_axes-2); //Left and right bound
+    initAdditionalArrays();
+    Stencil<int> stencil_spM(kernel_SpM_TxHPC, &spM, &spM_d);
+    stencil_spM.setInitFunction(init_spM);
+
+    stencil_spM.init(memoryPointer, amountOfShelfs, SHELVESIZE, 1, 1024);
+
+    std::chrono::steady_clock::time_point begin_run = std::chrono::steady_clock::now();
+    stencil_spM.run_withTxHPC(iterations); //Number of iterations
+    std::chrono::steady_clock::time_point end_run = std::chrono::steady_clock::now();
+    double measuredtime =  static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds> (end_run - begin_run).count());
+    return measuredtime;
+};

@@ -1,7 +1,17 @@
 cmake_minimum_required(VERSION 3.5)
 project(FASD)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+SET(GCC_SSE2_FLAGS   "-msse2 -DINTEL_SSE2")
+SET(GCC_SSE3_FLAGS   "-msse3 -DINTEL_SSE3")
+SET(GCC_SSSE3_FLAGS   "-mssse3 -DINTEL_SSSE3")
+SET(GCC_SSSE4.1_FLAGS   "-msse4.1 -DINTEL_SSE4")
+SET(GCC_SSE4.2_FLAGS   "-msse4.2 -DINTEL_SSE4")
+SET(GCC_MPCL_MUL   "-mpclmul -DINTEL_SSE4_PCLMUL")
+
+SET(CMAKE_CXX_FLAGS "-std=c++11 -DJERASURE ${CMAKE_EXE_LINKER_FLAGS} ${GCC_SSE2_FLAGS} ${GCC_SSE3_FLAGS} ${GCC_SSSE3_FLAGS} ${GCC_SSSE4.1_FLAGS} ${GCC_SSE4.2_FLAGS} ${GCC_MPCL_MUL}" )
+SET(CMAKE_C_FLAGS "-DJERASURE ${GCC_SSE2_FLAGS} ${GCC_SSE3_FLAGS} ${GCC_SSSE3_FLAGS} ${GCC_SSSE4.1_FLAGS} ${GCC_SSE4.2_FLAGS} ${GCC_MPCL_MUL}" )
+
 include_directories(${CMAKE_SOURCE_DIR})
 
 find_package(MPI)
@@ -35,9 +45,8 @@ set(GF_SOURCES ${GF_PATH}/src/gf.c ${GF_PATH}/src/gf_general.c ${GF_PATH}/src/gf
 set(GF ${GF_HEADERS} ${GF_SOURCES})
 
 
-set(EXAMPLE_APPLICATIONS src/applications/jacobian.cpp src/applications/jacobian.h src/applications/gameOfLife.cpp src/applications/gameOfLife.h src/applications/sparseMatrixMultiplication.cpp src/applications/sparseMatrixMultiplication.h src/applications/v2_SparseM.cpp src/applications/v2_SparseM.h src/applications/access_example.cpp src/applications/access_example.h)
-add_executable(FASD src/measurements/run_applications.cpp ${EXAMPLE_APPLICATIONS})
-target_link_libraries(FASD ${Boost_LIBRARIES})
+
+
 
 #set(StencilForTxHPC_RAID6_DIR "/home/kuscum/workspace/TAS/include/StencilForStencilForTxHPC/TxHPC/raid6")
 #include_directories(${StencilForTxHPC_RAID6_DIR})
@@ -49,19 +58,13 @@ target_link_libraries(FASD ${Boost_LIBRARIES})
 
 #ADDING COMPILER LINKER FLAGS
 
-SET(GCC_SSE2_FLAGS   "-msse2 -DINTEL_SSE2")
-SET(GCC_SSE3_FLAGS   "-msse3 -DINTEL_SSE3")
-SET(GCC_SSSE3_FLAGS   "-mssse3 -DINTEL_SSSE3")
-SET(GCC_SSSE4.1_FLAGS   "-msse4.1 -DINTEL_SSE4")
-SET(GCC_SSE4.2_FLAGS   "-msse4.2 -DINTEL_SSE4")
-SET(GCC_MPCL_MUL   "-mpclmul -DINTEL_SSE4_PCLMUL")
 
-SET(CMAKE_CXX_FLAGS "-DJERASURE ${CMAKE_EXE_LINKER_FLAGS} ${GCC_SSE2_FLAGS} ${GCC_SSE3_FLAGS} ${GCC_SSSE3_FLAGS} ${GCC_SSSE4.1_FLAGS} ${GCC_SSE4.2_FLAGS} ${GCC_MPCL_MUL}" )
-SET(CMAKE_C_FLAGS "-DJERASURE ${GCC_SSE2_FLAGS} ${GCC_SSE3_FLAGS} ${GCC_SSSE3_FLAGS} ${GCC_SSSE4.1_FLAGS} ${GCC_SSE4.2_FLAGS} ${GCC_MPCL_MUL}" )
+set(EXAMPLE_APPLICATIONS src/applications/jacobian.cpp src/applications/jacobian.h src/applications/gameOfLife.cpp src/applications/gameOfLife.h src/applications/sparseMatrixMultiplication.cpp src/applications/sparseMatrixMultiplication.h src/applications/v2_SparseM.cpp src/applications/v2_SparseM.h src/applications/access_example.cpp src/applications/access_example.h)
+set(StencilForTxHPC ${JERASURE} ${GF} ${TxHPC} ${FASD_SOURCE_DIR}/include/StencilForTxHPC/TxHPC.h)
 
+add_executable(run_applications src/measurements/run_applications.cpp ${EXAMPLE_APPLICATIONS} ${StencilForTxHPC})
+add_executable(hello_world_stencil ${FASD_SOURCE_DIR}/src/helloWorlds/TxHPC_HelloWorld.cpp ${StencilForTxHPC} ${EXAMPLE_APPLICATIONS})
+target_link_libraries(run_applications ${Boost_LIBRARIES})
 
-set(StencilForTxHPC ${JERASURE} ${GF} ${TxHPC} ${EXAMPLE_APPLICATIONS})
-add_executable(HELLOWORLD_StencilForTxHPC ${FASD_SOURCE_DIR}/src/helloWorlds/TxHPC_HelloWorld.cpp ${StencilForTxHPC} ${FASD_SOURCE_DIR}/include/StencilForTxHPC/TxHPC.h)
-target_link_libraries(HELLOWORLD_StencilForTxHPC ${Boost_LIBRARIES})
-target_compile_features(HELLOWORLD_StencilForTxHPC PRIVATE cxx_range_for)
-#[[target_link_libraries(HELLOWORLD_StencilForTxHPC StencilForTxHPC_RAID6_LIB)]]
+target_link_libraries(hello_world_stencil ${Boost_LIBRARIES})
+target_compile_features(hello_world_stencil PRIVATE cxx_range_for)

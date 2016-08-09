@@ -23,7 +23,7 @@
 #define SIZE_CAT 1024
 
 #define SHELVENAME "TxHPC_"
-#define SHELVESIZE 1073741824 //1 Gibibyte
+#define SHELVESIZE 5.369e+9 //1 Gibibyte
 #define MMAP_DIR_LFS "/lfs"
 #define MMAP_DIR_DEVSHM "/dev/shm"
 

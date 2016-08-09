@@ -81,7 +81,7 @@ public:
         }
         // Mmap file
         //TODO Set Flags accordingly to the needs of the programm, maybe in setting.h?
-        void *mappedMemory = mmap(0, file_length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        void *mappedMemory = mmap(0, file_length, PROT_READ | PROT_WRITE | MAP_POPULATE, MAP_SHARED, fd, 0);
         if (MAP_FAILED == mappedMemory) {
             int errsv = errno;
             std::cout << "errno: " << errsv << ".\n";
