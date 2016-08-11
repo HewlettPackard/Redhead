@@ -7,7 +7,7 @@
 //#include "include/StencilForTxHPC/TxHPC.h"
 
 
-#define ITERATIONS_GML 100
+#define ITERATIONS_GML 10
 long _debug_TxHPC = 0;
 long _debug2 = 0;
 int kernel_gameOfLife_TxHPC_more_computation(int x, int y, Grid<int> grid){
@@ -19,7 +19,7 @@ int kernel_gameOfLife_TxHPC_more_computation(int x, int y, Grid<int> grid){
 
 //With TxHPC
 int kernel_gameOfLife_TxHPC(int x, int y, Grid<int> grid){
-    _debug_TxHPC++;
+//    _debug_TxHPC++;
     int sum =
             //Horizontal Neighbours
             grid.cell(x+1, y) + grid.cell(x-1, y)
@@ -60,7 +60,7 @@ int init_gameOfLife() {
 
 //Without TxHPC
 void kernel_gameOfLife(int x, int y, GridPointer gP, Grid<int> grid){
-    _debug2++;
+//    _debug2++;
     int sum =
             //Horizontal Neighbours
               grid.getCell(x+1, y) + grid.getCell(x-1, y)

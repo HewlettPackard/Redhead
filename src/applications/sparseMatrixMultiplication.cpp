@@ -103,6 +103,6 @@ double sparseMatrix_TxHPC(char** memoryPointer, int amountOfShelfs, int prefetch
     std::chrono::steady_clock::time_point begin_run = std::chrono::steady_clock::now();
     stencil_spM.run_withTxHPC(iterations); //Number of iterations
     std::chrono::steady_clock::time_point end_run = std::chrono::steady_clock::now();
-    double measuredtime =  static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds> (end_run - begin_run).count());
+    double measuredtime =  static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds> (end_run - begin_run).count());
     return measuredtime;
 };
