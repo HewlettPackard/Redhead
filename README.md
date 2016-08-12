@@ -8,7 +8,7 @@ To use this code run the following commands. :high_brightness:
 cd bin
 cmake ../.
 make
-./run_applications %APPLICATION_TYPE %ITERATION_SIZE %OPTION_GRIDSIZE
+./run_applications %APPLICATION_TYPE %ITERATION_SIZE %OPTIONAL_GRIDSIZE
 
 #To plot the graph (Activate X11, gnuplot must be installed (I use VM45))
 gnuplot Script_%APPLICATION_Name --persist
@@ -27,7 +27,7 @@ APPLICATION_TYPE:
 * 100
 * 1000 (Everything above will take too much time.)
 
-%OPTION_GRIDSIZE
+%OPTIONAL_GRIDSIZE
 Use this parameter if application jf_scale was chosen to set the gridsize: (Use the right numbers)
 * 1GB = 11 180
 * 10GB = 35356
