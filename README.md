@@ -8,7 +8,7 @@ To use this code run the following commands. :high_brightness:
 cd bin
 cmake ../.
 make
-./run_applications %APPLICATION_TYPE %ITERATION_SIZE %MEMORY_TYPE
+./run_applications %APPLICATION_TYPE %ITERATION_SIZE %OPTION_GRIDSIZE
 
 #To plot the graph (Activate X11, gnuplot must be installed (I use VM45))
 gnuplot Script_%APPLICATION_Name --persist
@@ -17,7 +17,7 @@ gnuplot Script_%APPLICATION_Name --persist
 APPLICATION_TYPE:
 * jf = Jacobi Iteration
 * gf = GameOfLife
-* gf_IT = GameOfLife With More Computation
+* gf_computation = GameOfLife With More Computation
 * sm = SparseMatrix
 * ac = AccessTimes
 * jf_scale = Jacobi Iteration Scaling Up to 1TB
@@ -26,6 +26,15 @@ APPLICATION_TYPE:
 * 1
 * 100
 * 1000 (Everything above will take too much time.)
+
+%OPTION_GRIDSIZE
+Use this parameter if application jf_scale was chosen to set the gridsize: (Use the right numbers)
+* 1GB = 11 180
+* 10GB = 35356
+* 100GB = 111 804
+* 250GB = 176776
+* 500GB = 250 000
+* 1000TB = 353 553
 
 __Onkar will deliver here:__
 *   /include
