@@ -3,7 +3,7 @@
 Project redhead: Total Resilience for The Machine.
 
 This is a system for creating applications built using the Stencils for TxHPC framweworks, for shared access to Gen-Z-style byte addressable shared memory across nodes (as in The Machine).
-See: http://http://genzconsortium.org/
+See: http://genzconsortium.org/
 
     [HPE copyright notice]
 
