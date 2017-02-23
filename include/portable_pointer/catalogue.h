@@ -3,7 +3,7 @@
 //
 /*
 This is a the minimal catalogue for portable pointers and types, shared across nodes to Gen-Z-style byte addressable shared memory across nodes (as in The Machine).
-See: http://http://genzconsortium.org/
+See: http://genzconsortium.org/
 
 [HPE copyright notice]
 

@@ -1,6 +1,6 @@
 /*
 This is a the RAID 6 file for applications built using the TxHPC framwework, for shared access to Gen-Z-style byte addressable shared memory across nodes (as in The Machine).
-See: http://http://genzconsortium.org/
+See: http://genzconsortium.org/
 
     [HPE copyright notice]
 

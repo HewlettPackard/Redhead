@@ -6,7 +6,7 @@ TxHPC is a framework that enables transactional HPC on persistent
 memory guaranteeing high availability, resiliance, fault-tolerance
 and reliability, for shared access to Gen-Z-style byte addressable
 shared memory across nodes (as in The Machine).
-See: http://http://genzconsortium.org/
+See: http://genzconsortium.org/
 
     [HPE copyright notice]
 
